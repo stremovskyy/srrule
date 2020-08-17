@@ -19,26 +19,29 @@ import (
 
 func BenchmarkIfInRange(b *testing.B) {
 	r := NewSRrule()
+	t := time.Now()
 
 	for i := 0; i < b.N; i++ {
-		_, _ = r.IfInRange("[\"~w{3};t{00:12-23:59}~\"]", "Europe/Kiev")
+		_, _ = r.IfInRange("[\"~w{3};t{00:12-23:59}~\"]", t, "Europe/Kiev")
 	}
 }
 
 func BenchmarkCheckRRule(b *testing.B) {
 	l, _ := time.LoadLocation("Europe/Kiev")
+	t := time.Now()
 
 	for i := 0; i < b.N; i++ {
-		_, _ = checkRRule("[\"~w{3};t{00:12-23:59}~\"]", l)
+		_, _ = checkRRuleForTime("[\"~w{3};t{00:12-23:59}~\"]", &t, l)
 	}
 }
 
 func BenchmarkRangeInLoc(b *testing.B) {
 	r := NewSRrule()
 	l, _ := time.LoadLocation("Europe/Kiev")
+	t := time.Now()
 
 	for i := 0; i < b.N; i++ {
-		_, _ = r.RangeInLoc("[\"~w{3};t{00:12-23:59}~\"]", l)
+		_, _ = r.RangeInLoc("[\"~w{3};t{00:12-23:59}~\"]", &t, l)
 	}
 }
 
@@ -46,9 +49,10 @@ func BenchmarkIfRulesInRangeLoc(b *testing.B) {
 	r := NewSRrule()
 	l, _ := time.LoadLocation("Europe/Kiev")
 	rs, _ := r.UnmarshalRule([]byte("[\"~w{3};t{00:12-23:59}~\"]"))
+	t := time.Now()
 
 	for i := 0; i < b.N; i++ {
-		_, _ = r.IfRulesInRangeLoc(&rs, l)
+		_, _ = r.IfRulesInRangeLoc(&rs, &t, l)
 	}
 }
 
@@ -72,8 +76,9 @@ func TestIfInRange(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := NewSRrule()
+			tim := time.Now()
 
-			got, err := r.IfInRange(tt.args.r, tt.args.z)
+			got, err := r.IfInRange(tt.args.r, tim, tt.args.z)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("IfInRange() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -99,7 +104,9 @@ func Test_checkRRule(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := checkRRule(tt.args.r, tt.args.l)
+			tim := time.Now()
+
+			got, err := checkRRuleForTime(tt.args.r, &tim, tt.args.l)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("checkRRule() error = %v, wantErr %v", err, tt.wantErr)
 				return

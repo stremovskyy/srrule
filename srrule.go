@@ -22,15 +22,6 @@ type Rules []string
 type SRrule struct {
 }
 
-func (s *SRrule) RangeInLoc(r string, loc *time.Location) (bool, error) {
-	rs, err := s.UnmarshalRule([]byte(r))
-	if err != nil {
-		return false, err
-	}
-
-	return s.IfRulesInRangeLoc(&rs, loc)
-}
-
 func NewSRrule() *SRrule {
 	return &SRrule{}
 }
@@ -41,23 +32,32 @@ func (s *SRrule) UnmarshalRule(data []byte) (Rules, error) {
 	return r, err
 }
 
-func (s *SRrule) IfInRange(r string, z string) (bool, error) {
+func (s *SRrule) IfInRange(r string, t time.Time, z string) (bool, error) {
 	l, err := time.LoadLocation(z)
 	if err != nil {
 		return false, err
 	}
 
-	return s.RangeInLoc(r, l)
+	return s.RangeInLoc(r, &t, l)
 }
 
-func (s *SRrule) IfRulesInRangeLoc(r *Rules, loc *time.Location) (bool, error) {
+func (s *SRrule) RangeInLoc(r string, t *time.Time, loc *time.Location) (bool, error) {
+	rs, err := s.UnmarshalRule([]byte(r))
+	if err != nil {
+		return false, err
+	}
+
+	return s.IfRulesInRangeLoc(&rs, t, loc)
+}
+
+func (s *SRrule) IfRulesInRangeLoc(r *Rules, t *time.Time, loc *time.Location) (bool, error) {
 	if r == nil {
 		return false, nil
 	}
 
 	if len(*r) > 1 {
 		for _, rl := range *r {
-			in, err := checkRRule(rl, loc)
+			in, err := checkRRuleForTime(rl, t, loc)
 			if err != nil {
 				return false, err
 			}
@@ -67,7 +67,7 @@ func (s *SRrule) IfRulesInRangeLoc(r *Rules, loc *time.Location) (bool, error) {
 		}
 		return false, nil
 	} else if len(*r) == 1 {
-		return checkRRule((*r)[0], loc)
+		return checkRRuleForTime((*r)[0], t, loc)
 	} else {
 		return false, FormatError
 	}

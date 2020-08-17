@@ -7,7 +7,7 @@ import (
 	"unicode"
 )
 
-func checkRRule(r string, l *time.Location) (bool, error) {
+func checkRRuleForTime(r string, t *time.Time, l *time.Location) (bool, error) {
 	if strings.Contains(r, alwaysOn) {
 		return true, nil
 	}
@@ -16,6 +16,7 @@ func checkRRule(r string, l *time.Location) (bool, error) {
 		return false, nil
 	} else if strings.HasPrefix(r, relPrefix) {
 		inWeekDays := false
+
 	Loop:
 		for _, l := range strings.Split(strings.Trim(r, relPrefix), rulesSeparator) {
 			if strings.HasPrefix(l, ignorePrefix) {
@@ -38,7 +39,7 @@ func checkRRule(r string, l *time.Location) (bool, error) {
 						}
 
 						for i := st; i <= end; i++ {
-							if time.Now().Weekday() == time.Weekday(i) {
+							if t.Weekday() == time.Weekday(i) {
 								inWeekDays = true
 								break Loop
 							}
@@ -49,7 +50,7 @@ func checkRRule(r string, l *time.Location) (bool, error) {
 							return false, err
 						}
 						test := time.Weekday(wd)
-						if time.Now().Weekday() == test {
+						if t.Weekday() == test {
 							inWeekDays = true
 							break Loop
 						}
@@ -61,23 +62,24 @@ func checkRRule(r string, l *time.Location) (bool, error) {
 		if !inWeekDays {
 			return false, nil
 		}
+
 		for _, rul := range strings.Split(strings.Trim(r, relPrefix), rulesSeparator) {
 			if strings.HasPrefix(rul, timePrefix) {
 				rul = strings.TrimFunc(rul, func(r rune) bool {
 					return !unicode.IsNumber(r) && !unicode.IsMark(r)
 				})
 
-				for _, t := range strings.Split(rul, ruleSeqSeparator) {
-					if len(t) > 1 {
-						start, err := time.ParseInLocation(timeLayout, strings.Split(t, rangeSeparator)[0], l)
+				for _, tim := range strings.Split(rul, ruleSeqSeparator) {
+					if len(tim) > 1 {
+						start, err := time.ParseInLocation(timeLayout, strings.Split(tim, rangeSeparator)[0], l)
 						if err != nil {
 							return false, err
 						}
-						end, err := time.ParseInLocation(timeLayout, strings.Split(t, rangeSeparator)[1], l)
+						end, err := time.ParseInLocation(timeLayout, strings.Split(tim, rangeSeparator)[1], l)
 						if err != nil {
 							return false, err
 						}
-						nowTime := time.Date(0, 1, 1, time.Now().Hour(), time.Now().Minute(), 0, 0, l)
+						nowTime := time.Date(0, 1, 1, t.Hour(), t.Minute(), 0, 0, l)
 						if (nowTime.After(start) && nowTime.Before(end)) || nowTime.Equal(start) || nowTime.Equal(end) {
 							return true, nil
 						}
@@ -89,10 +91,12 @@ func checkRRule(r string, l *time.Location) (bool, error) {
 		}
 	} else if strings.HasPrefix(r, exactPrefix) {
 		var kl []string
+
 		for _, lk := range strings.Split(strings.Trim(r, relPrefix), rulesSeparator) {
 			lk = strings.TrimFunc(lk, func(r rune) bool {
 				return !unicode.IsNumber(r) && !unicode.IsMark(r)
 			})
+
 			kl = append(kl, lk)
 		}
 
@@ -105,7 +109,7 @@ func checkRRule(r string, l *time.Location) (bool, error) {
 			if err != nil {
 				return false, err
 			}
-			if (time.Now().After(start) && time.Now().Before(end)) || time.Now().Equal(start) || time.Now().Equal(end) {
+			if (t.After(start) && t.Before(end)) || t.Equal(start) || t.Equal(end) {
 				return true, nil
 			}
 		}
@@ -113,5 +117,6 @@ func checkRRule(r string, l *time.Location) (bool, error) {
 	} else {
 		return false, FormatError
 	}
+
 	return false, nil
 }
