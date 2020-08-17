@@ -22,6 +22,15 @@ type Rules []string
 type SRrule struct {
 }
 
+func (s *SRrule) RangeInLoc(r string, loc *time.Location) (bool, error) {
+	rs, err := s.UnmarshalRule([]byte(r))
+	if err != nil {
+		return false, err
+	}
+
+	return s.IfRulesInRangeLoc(&rs, loc)
+}
+
 func NewSRrule() *SRrule {
 	return &SRrule{}
 }
@@ -38,14 +47,17 @@ func (s *SRrule) IfInRange(r string, z string) (bool, error) {
 		return false, err
 	}
 
-	rs, err := s.UnmarshalRule([]byte(r))
-	if err != nil {
-		return false, err
+	return s.RangeInLoc(r, l)
+}
+
+func (s *SRrule) IfRulesInRangeLoc(r *Rules, loc *time.Location) (bool, error) {
+	if r == nil {
+		return false, nil
 	}
 
-	if len(rs) > 1 {
-		for _, rl := range rs {
-			in, err := checkRRule(rl, l)
+	if len(*r) > 1 {
+		for _, rl := range *r {
+			in, err := checkRRule(rl, loc)
 			if err != nil {
 				return false, err
 			}
@@ -54,8 +66,8 @@ func (s *SRrule) IfInRange(r string, z string) (bool, error) {
 			}
 		}
 		return false, nil
-	} else if len(rs) == 1 {
-		return checkRRule(rs[0], l)
+	} else if len(*r) == 1 {
+		return checkRRule((*r)[0], loc)
 	} else {
 		return false, FormatError
 	}

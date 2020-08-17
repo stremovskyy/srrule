@@ -9,13 +9,48 @@
  * Proprietary and confidential
  * Written by Anton (karmadon) Stremovskyy <stremovskyy@gmail.com>
  */
-
+//["~w{1-5};t{10:12-17:35}~"]
 package srrule
 
 import (
 	"testing"
 	"time"
 )
+
+func BenchmarkIfInRange(b *testing.B) {
+	r := NewSRrule()
+
+	for i := 0; i < b.N; i++ {
+		_, _ = r.IfInRange("[\"~w{3};t{00:12-23:59}~\"]", "Europe/Kiev")
+	}
+}
+
+func BenchmarkCheckRRule(b *testing.B) {
+	l, _ := time.LoadLocation("Europe/Kiev")
+
+	for i := 0; i < b.N; i++ {
+		_, _ = checkRRule("[\"~w{3};t{00:12-23:59}~\"]", l)
+	}
+}
+
+func BenchmarkRangeInLoc(b *testing.B) {
+	r := NewSRrule()
+	l, _ := time.LoadLocation("Europe/Kiev")
+
+	for i := 0; i < b.N; i++ {
+		_, _ = r.RangeInLoc("[\"~w{3};t{00:12-23:59}~\"]", l)
+	}
+}
+
+func BenchmarkIfRulesInRangeLoc(b *testing.B) {
+	r := NewSRrule()
+	l, _ := time.LoadLocation("Europe/Kiev")
+	rs, _ := r.UnmarshalRule([]byte("[\"~w{3};t{00:12-23:59}~\"]"))
+
+	for i := 0; i < b.N; i++ {
+		_, _ = r.IfRulesInRangeLoc(&rs, l)
+	}
+}
 
 func TestIfInRange(t *testing.T) {
 	type args struct {
@@ -31,6 +66,7 @@ func TestIfInRange(t *testing.T) {
 		{name: "Sun,Mon,Sat whole day", args: args{"[\"~w{1-2,6};t{00:12-23:59}~\"]", "Europe/Kiev"}, want: true, wantErr: false},
 		{name: "Always on", args: args{"[\"*\"]", "Europe/Kiev"}, want: true, wantErr: false},
 		{name: "Wed whole day", args: args{"[\"~w{3};t{00:12-23:59}~\"]", "Europe/Kiev"}, want: false, wantErr: false},
+		{name: "Office is Open", args: args{"[\"~w{1-5};t{10:12-17:35}~\"]", "Europe/Kiev"}, want: true, wantErr: false},
 		{name: "Error in RRULE", args: args{"[\"\"~w{3};t{10:59-23:59}~\",\"-БЛА-БЛА-БЛА-\",\"~w{5};t{00:00-05:00}~\"]", "Europe/Kiev"}, want: false, wantErr: true},
 	}
 	for _, tt := range tests {
@@ -42,6 +78,7 @@ func TestIfInRange(t *testing.T) {
 				t.Errorf("IfInRange() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
 			if got != tt.want {
 				t.Errorf("IfInRange() = %v, want %v", got, tt.want)
 			}
