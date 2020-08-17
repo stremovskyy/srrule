@@ -28,14 +28,16 @@ func TestIfInRange(t *testing.T) {
 		want    bool
 		wantErr bool
 	}{
-		{name: "Sun,Mon,Sat whole day", args: args{"[\"~w{1-2,6};t{00:12-23:59}~\"]", "Europe/Kiev"}, want: false, wantErr: false},
+		{name: "Sun,Mon,Sat whole day", args: args{"[\"~w{1-2,6};t{00:12-23:59}~\"]", "Europe/Kiev"}, want: true, wantErr: false},
 		{name: "Always on", args: args{"[\"*\"]", "Europe/Kiev"}, want: true, wantErr: false},
-		{name: "Wed whole day", args: args{"[\"~w{3};t{00:12-23:59}~\"]", "Europe/Kiev"}, want: true, wantErr: false},
+		{name: "Wed whole day", args: args{"[\"~w{3};t{00:12-23:59}~\"]", "Europe/Kiev"}, want: false, wantErr: false},
 		{name: "Error in RRULE", args: args{"[\"\"~w{3};t{10:59-23:59}~\",\"-БЛА-БЛА-БЛА-\",\"~w{5};t{00:00-05:00}~\"]", "Europe/Kiev"}, want: false, wantErr: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := IfInRange(tt.args.r, tt.args.z)
+			r := NewSRrule()
+
+			got, err := r.IfInRange(tt.args.r, tt.args.z)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("IfInRange() error = %v, wantErr %v", err, tt.wantErr)
 				return
